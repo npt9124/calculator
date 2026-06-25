@@ -3,8 +3,9 @@
     "",
     "\\MayTinh",
     "\\MayTinh\\MayTinh",
-    "\\MayTinh\\MayTinh\\bin"
+    "\\MayTinh\\MayTinh\\bin\\Debug",
+    "\\MayTinh\\MayTinh\\obj\\Debug"
   ],
-  "SelectedNode": "\\MayTinh\\MayTinh.sln",
+  "SelectedNode": "\\MayTinh\\MayTinh\\Form1.cs",
   "PreviewInSolutionExplorer": false
 }
