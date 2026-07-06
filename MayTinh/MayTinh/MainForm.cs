@@ -35,5 +35,11 @@ namespace MayTinh
             stopWatch.Show();
             DateTime time = DateTime.Now;
         }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            ThreadHome threadHome = new ThreadHome();
+            threadHome.Show();
+        }
     }
 }

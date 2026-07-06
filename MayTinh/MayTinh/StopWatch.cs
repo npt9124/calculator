@@ -1,26 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.IO;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 namespace MayTinh
 {
+
     public partial class StopWatch : Form
     {
         public StopWatch()
         {
             InitializeComponent();
-            //timer1.Interval = 10; comboBox.Items.Clear();
+            //timer1.Interval = 10; 
             comboBox.Items.AddRange(new object[] { "csv", "json", "txt", "ini" });
             comboBox.SelectedIndex = 0;
+            btnRestart.Enabled = false;
+            btnSave.Enabled = false;
+
         }
 
 
@@ -59,7 +59,7 @@ namespace MayTinh
 
         private void buttonStart_Click(object sender, EventArgs e)
         {
-            if(!isRunning)
+            if (!isRunning)
             {
                 if (elapsedMilliseconds == 0)
                 {
@@ -68,30 +68,33 @@ namespace MayTinh
                 else
                 {
                     startTime = DateTime.Now - TimeSpan.FromMilliseconds(elapsedMilliseconds);
-                }    
+                }
                 timer1.Start();
                 DateTime time1 = DateTime.Now;
                 isRunning = true;
                 btnStart.Text = "Stop";
+                btnRestart.Enabled = true;
+                btnSave.Enabled = true;
             }
             else
             {
                 timer1.Stop();
                 isRunning = false;
                 btnStart.Text = "Start";
+
             }
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            if(!timer1.Enabled)
+            if (!timer1.Enabled)
             {
                 MessageBox.Show("Đồng hồ chưa chạy!");
                 return;
             }
             long current = elapsedMilliseconds;
             long lapTime = current - lastLapMilliseconds;
-            dataGridView1.Rows.Insert(0,lap,FormatTime(lapTime),FormatTime(current));
+            dataGridView1.Rows.Insert(0, lap, FormatTime(lapTime), FormatTime(current));
             lastLapMilliseconds = current;
             lap++;
         }
@@ -115,10 +118,12 @@ namespace MayTinh
             dataGridView1.Rows.Clear();
 
             btnStart.Text = "Start";
+            btnRestart.Enabled = false;
+            btnSave.Enabled = false;
         }
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-           
+
         }
         private void timer1_Tick_1(object sender, EventArgs e)
         {
@@ -132,15 +137,6 @@ namespace MayTinh
             public string LapTime { get; set; }
             public string TotalTime { get; set; }
         }
-        public class StopWatchData
-        {
-            public long ElapsedMilliseconds { get; set; }
-            public bool IsRunning { get; set; }
-            public int Lap { get; set;  }
-            public long LastLapMilliseconds { get; set; }
-            public List<LapRecord> LapRecords { get; set; } = new List<LapRecord>();
-
-        }
         private string GetFileFilter(string format)
         {
             switch (format)
@@ -152,140 +148,145 @@ namespace MayTinh
                 default: return "All files (*.*)|*.*";
             }
         }
-        private string ExportToCsv(StopWatchData data)
+    public class IniFile
+        {
+        public string Path;
+
+        public IniFile(string path)
+        {
+            Path = path;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        static extern long WritePrivateProfileString(
+            string section,
+            string key,
+            string value,
+            string filePath);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        static extern int GetPrivateProfileString(
+            string section,
+            string key,
+            string defaultValue,
+            StringBuilder value,
+            int size,
+            string filePath);
+
+        public void Write(string section, string key, string value)
+        {
+            WritePrivateProfileString(section, key, value, Path);
+        }
+
+        public string Read(string section, string key)
+        {
+            StringBuilder sb = new StringBuilder(255);
+
+            GetPrivateProfileString(
+                section,
+                key,
+                "",
+                sb,
+                255,
+                Path);
+
+            return sb.ToString();
+        }
+    } 
+        private string ExportToCsv(List<LapRecord> laps)
         {
             var sb = new StringBuilder();
             sb.AppendLine("LapNumber,LapTime,TotalTime");
-            foreach (var l in data.LapRecords)
+            foreach (var l in laps)
                 sb.AppendLine($"{l.LapNumber},{l.LapTime},{l.TotalTime}");
             return sb.ToString();
         }
 
-        private string ExportToJson(StopWatchData data) =>
-            JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        private List<LapRecord> ImportFromJson(string content) =>
+        JsonSerializer.Deserialize<List<LapRecord>>(content) ?? new List<LapRecord>();
 
-        private string ExportToTxt(StopWatchData data)
+        private string ExportToJson(List<LapRecord> laps)
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            return JsonSerializer.Serialize(laps, options);
+        }
+        private string ExportToTxt(List<LapRecord> laps)
         {
             var sb = new StringBuilder();
-            //sb.AppendLine($"ElapsedMilliseconds: {data.ElapsedMilliseconds}");
-            //sb.AppendLine($"IsRunning: {data.IsRunning}");
-            //sb.AppendLine($"Lap: {data.Lap}");
-            //sb.AppendLine($"LastLapMilliseconds: {data.LastLapMilliseconds}");
-            //sb.AppendLine("---LAPS---");
-            foreach (var l in data.LapRecords)
-
+            foreach (var l in laps)
                 sb.AppendLine($"{l.LapNumber}\t{l.LapTime}\t{l.TotalTime}");
             return sb.ToString();
         }
 
-
-        private string ExportToIni(StopWatchData data)
+        private void ExportToIni(List<LapRecord> laps, string fileName)
         {
-            var sb = new StringBuilder();
-            for (int i = 0; i < data.LapRecords.Count; i++)
+            IniFile ini = new IniFile(fileName);
+
+            for (int i = 0; i < laps.Count; i++)
             {
-                var l = data.LapRecords[i];
-                sb.AppendLine($"Lap={i + 1}");
-                sb.AppendLine($"Number={l.LapNumber}");
-                sb.AppendLine($"LapTime={l.LapTime}");
-                sb.AppendLine($"TotalTime={l.TotalTime}");
+                string section = $"Lap{i + 1}";
+
+                ini.Write(section, "Number", laps[i].LapNumber.ToString());
+                ini.Write(section, "LapTime", laps[i].LapTime);
+                ini.Write(section, "TotalTime", laps[i].TotalTime);
             }
-            return sb.ToString();
         }
-
-        private StopWatchData ImportFromCsv(string content)
+        private List<LapRecord> ImportFromIni(string fileName)
         {
-            var data = new StopWatchData();
-            var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            var stateValues = lines[1].Split(',');
-            data.ElapsedMilliseconds = long.Parse(stateValues[0]);
-            data.IsRunning = bool.Parse(stateValues[1]);
-            data.Lap = int.Parse(stateValues[2]);
-            data.LastLapMilliseconds = long.Parse(stateValues[3]);
+            IniFile ini = new IniFile(fileName);
 
-            for (int i = 4; i < lines.Length; i++)
+            List<LapRecord> laps = new List<LapRecord>();
+
+            int i = 1;
+
+            while (true)
+            {
+                string section = $"Lap{i}";
+
+                string number = ini.Read(section, "Number");
+
+                if (string.IsNullOrEmpty(number))
+                    break;
+
+                LapRecord lap = new LapRecord();
+
+                lap.LapNumber = int.Parse(number);
+                lap.LapTime = ini.Read(section, "LapTime");
+                lap.TotalTime = ini.Read(section, "TotalTime");
+
+                laps.Add(lap);
+
+                i++;
+            }
+
+            return laps;
+        }
+        private List<LapRecord> ImportFromCsv(string content)
+        {
+            var laps = new List<LapRecord>();
+            var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 1; i < lines.Length; i++)
             {
                 var parts = lines[i].Split(',');
                 if (parts.Length < 3) continue;
-                data.LapRecords.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
+                laps.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
             }
-            return data;
+            return laps;
         }
 
-        private StopWatchData ImportFromJson(string content) =>
-            JsonSerializer.Deserialize<StopWatchData>(content) ?? new StopWatchData();
+        
 
-        private StopWatchData ImportFromTxt(string content)
+        private List<LapRecord> ImportFromTxt(string content)
         {
-            var data = new StopWatchData();
+            var laps = new List<LapRecord>();
             var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            bool readingLaps = false;
             foreach (var line in lines)
             {
-                if (line.StartsWith("---LAPS---")) { readingLaps = true; continue; }
-                if (!readingLaps)
-                {
-                    var kv = line.Split(new[] { ':' }, 2);
-                    if (kv.Length != 2) continue;
-                    switch (kv[0].Trim())
-                    {
-                        case "ElapsedMilliseconds": data.ElapsedMilliseconds = long.Parse(kv[1].Trim()); break;
-                        case "IsRunning": data.IsRunning = bool.Parse(kv[1].Trim()); break;
-                        case "Lap": data.Lap = int.Parse(kv[1].Trim()); break;
-                        case "LastLapMilliseconds": data.LastLapMilliseconds = long.Parse(kv[1].Trim()); break;
-                    }
-                }
-                else
-                {
-                    var parts = line.Split('\t');
-                    if (parts.Length < 3) continue;
-                    data.LapRecords.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
-                }
+                var parts = line.Split('\t');
+                if (parts.Length < 3) continue;
+                laps.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
             }
-            return data;
-        }
-
-        private StopWatchData ImportFromIni(string content)
-        {
-            var data = new StopWatchData();
-            var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            var lapDict = new Dictionary<int, LapRecord>();
-            string section = "";
-
-            foreach (var line in lines)
-            {
-                string t = line.Trim();
-                if (t.StartsWith("[") && t.EndsWith("]")) { section = t; continue; }
-                var kv = t.Split(new[] { '=' }, 2);
-                if (kv.Length != 2) continue;
-                string key = kv[0].Trim(), value = kv[1].Trim();
-
-                if (section == "[State]")
-                {
-                    switch (key)
-                    {
-                        case "ElapsedMilliseconds": data.ElapsedMilliseconds = long.Parse(value); break;
-                        case "IsRunning": data.IsRunning = bool.Parse(value); break;
-                        case "Lap": data.Lap = int.Parse(value); break;
-                        case "LastLapMilliseconds": data.LastLapMilliseconds = long.Parse(value); break;
-                    }
-                }
-                else if (section == "[Laps]")
-                {
-                    int dot = key.IndexOf('.');
-                    if (dot < 0) continue;
-                    int idx = int.Parse(key.Substring(0, dot).Replace("Lap", ""));
-                    if (!lapDict.ContainsKey(idx)) lapDict[idx] = new LapRecord();
-                    switch (key.Substring(dot + 1))
-                    {
-                        case "Number": lapDict[idx].LapNumber = int.Parse(value); break;
-                        case "LapTime": lapDict[idx].LapTime = value; break;
-                        case "TotalTime": lapDict[idx].TotalTime = value; break;
-                    }
-                }
-            }
-            foreach (var kv in lapDict.OrderBy(x => x.Key)) data.LapRecords.Add(kv.Value);
-            return data;
+            return laps;
         }
         private void buttonDownload_Click(object sender, EventArgs e)
         {
@@ -295,20 +296,12 @@ namespace MayTinh
                 MessageBox.Show("Vui lòng chọn định dạng file!");
                 return;
             }
-
-            StopWatchData data = new StopWatchData
-            {
-                ElapsedMilliseconds = elapsedMilliseconds,
-                IsRunning = isRunning,
-                Lap = lap,
-                LastLapMilliseconds = lastLapMilliseconds
-            };
-
+            var laps = new List<LapRecord>();
             for (int i = dataGridView1.Rows.Count - 1; i >= 0; i--)
             {
                 var row = dataGridView1.Rows[i];
                 if (row.Cells[0].Value == null) continue;
-                data.LapRecords.Add(new LapRecord
+                laps.Add(new LapRecord
                 {
                     LapNumber = Convert.ToInt32(row.Cells[0].Value),
                     LapTime = row.Cells[1].Value?.ToString(),
@@ -323,25 +316,23 @@ namespace MayTinh
 
             try
             {
-                string content;
-                switch (format)
+                if (format == "ini")
                 {
-                    case "csv":
-                        content = ExportToCsv(data);
-                        break;
-                    case "json":
-                        content = ExportToJson(data);
-                        break;
-                    case "txt":
-                        content = ExportToTxt(data);
-                        break;
-                    case "ini":
-                        content = ExportToIni(data);
-                        break;
-                    default:
-                        throw new NotSupportedException();
+                    ExportToIni(laps, sfd.FileName);
                 }
-                File.WriteAllText(sfd.FileName, content, Encoding.UTF8);
+                else
+                {
+                    string content;
+                    switch (format)
+                    {
+                        case "csv": content = ExportToCsv(laps); break;
+                        case "json": content = ExportToJson(laps); break;
+                        case "txt": content = ExportToTxt(laps); break;
+                        default: throw new NotSupportedException();
+                    }
+                    File.WriteAllText(sfd.FileName, content, Encoding.UTF8); 
+                }
+
                 MessageBox.Show("Xuất file thành công!");
             }
             catch (Exception ex)
@@ -349,7 +340,6 @@ namespace MayTinh
                 MessageBox.Show("Lỗi khi xuất file: " + ex.Message);
             }
         }
-
         private void buttonUpload_Click(object sender, EventArgs e)
         {
             string format = comboBox.SelectedItem?.ToString()?.ToLower();
@@ -365,48 +355,27 @@ namespace MayTinh
 
             try
             {
-                string content = File.ReadAllText(ofd.FileName, Encoding.UTF8);
-                StopWatchData data;
-                switch (format)
-                {
-                    case "csv":
-                        data = ImportFromCsv(content);
-                        break;
-                    case "json":
-                        data = ImportFromJson(content);
-                        break;
-                    case "txt":
-                        data = ImportFromTxt(content);
-                        break;
-                    case "ini":
-                        data = ImportFromIni(content);
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
+                List<LapRecord> laps;
 
-                timer1.Stop();
-                isRunning = false;
-                btnStart.Text = "Start";
-                elapsedMilliseconds = data.ElapsedMilliseconds;
-                lap = data.Lap;
-                lastLapMilliseconds = data.LastLapMilliseconds;
-                UpdateDisplay();
+                if (format == "ini")
+                {
+                    laps = ImportFromIni(ofd.FileName);
+                }
+                else
+                {
+                    string content = File.ReadAllText(ofd.FileName, Encoding.UTF8);
+                    switch (format)
+                    {
+                        case "csv": laps = ImportFromCsv(content); break;
+                        case "json": laps = ImportFromJson(content); break;
+                        case "txt": laps = ImportFromTxt(content); break;
+                        default: throw new NotSupportedException();
+                    }
+                }
 
                 dataGridView1.Rows.Clear();
-                for (int i = data.LapRecords.Count - 1; i >= 0; i--)
-                {
-                    var l = data.LapRecords[i];
-                    dataGridView1.Rows.Insert(0, l.LapNumber, l.LapTime, l.TotalTime);
-                }
-
-                if (data.IsRunning)
-                {
-                    startTime = DateTime.Now - TimeSpan.FromMilliseconds(elapsedMilliseconds);
-                    timer1.Start();
-                    isRunning = true;
-                    btnStart.Text = "Stop";
-                }
+                for (int i = laps.Count - 1; i >= 0; i--)
+                    dataGridView1.Rows.Insert(0, laps[i].LapNumber, laps[i].LapTime, laps[i].TotalTime);
 
                 MessageBox.Show("Nạp file thành công!");
             }
@@ -415,7 +384,6 @@ namespace MayTinh
                 MessageBox.Show("Lỗi khi đọc file: " + ex.Message);
             }
         }
-
         private void comboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
 
