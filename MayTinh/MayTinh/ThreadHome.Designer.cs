@@ -36,10 +36,10 @@
             this.lblTask = new System.Windows.Forms.Label();
             this.lblAsync = new System.Windows.Forms.Label();
             this.startThread = new System.Windows.Forms.Button();
-            this.endThread = new System.Windows.Forms.Button();
-            this.endTask = new System.Windows.Forms.Button();
+            this.stopThread0 = new System.Windows.Forms.Button();
+            this.stopTask = new System.Windows.Forms.Button();
             this.startTask = new System.Windows.Forms.Button();
-            this.endAsync = new System.Windows.Forms.Button();
+            this.stopAsync = new System.Windows.Forms.Button();
             this.startAsync = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
@@ -55,23 +55,26 @@
             // 
             // progressThread
             // 
-            this.progressThread.Location = new System.Drawing.Point(176, 47);
+            this.progressThread.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.progressThread.Location = new System.Drawing.Point(176, 53);
+            this.progressThread.Maximum = 1000;
             this.progressThread.Name = "progressThread";
-            this.progressThread.Size = new System.Drawing.Size(466, 45);
+            this.progressThread.Size = new System.Drawing.Size(414, 45);
             this.progressThread.TabIndex = 0;
+            this.progressThread.Click += new System.EventHandler(this.progressThread_Click);
             // 
             // progressTask
             // 
             this.progressTask.Location = new System.Drawing.Point(176, 176);
             this.progressTask.Name = "progressTask";
-            this.progressTask.Size = new System.Drawing.Size(466, 45);
+            this.progressTask.Size = new System.Drawing.Size(414, 45);
             this.progressTask.TabIndex = 1;
             // 
             // progressAsync
             // 
             this.progressAsync.Location = new System.Drawing.Point(176, 314);
             this.progressAsync.Name = "progressAsync";
-            this.progressAsync.Size = new System.Drawing.Size(466, 45);
+            this.progressAsync.Size = new System.Drawing.Size(414, 45);
             this.progressAsync.TabIndex = 2;
             // 
             // lblThread
@@ -108,43 +111,43 @@
             // 
             this.startThread.BackColor = System.Drawing.Color.Lime;
             this.startThread.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.startThread.Location = new System.Drawing.Point(675, 53);
+            this.startThread.Location = new System.Drawing.Point(614, 53);
             this.startThread.Name = "startThread";
             this.startThread.Size = new System.Drawing.Size(96, 37);
             this.startThread.TabIndex = 6;
             this.startThread.Text = "Start";
             this.startThread.UseVisualStyleBackColor = false;
-            this.startThread.Click += new System.EventHandler(this.startThread_Click_1);
+            this.startThread.Click += new System.EventHandler(this.startThread_Click);
             // 
-            // endThread
+            // stopThread0
             // 
-            this.endThread.BackColor = System.Drawing.Color.DarkSalmon;
-            this.endThread.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.endThread.Location = new System.Drawing.Point(782, 53);
-            this.endThread.Name = "endThread";
-            this.endThread.Size = new System.Drawing.Size(96, 37);
-            this.endThread.TabIndex = 7;
-            this.endThread.Text = "End";
-            this.endThread.UseVisualStyleBackColor = false;
-            this.endThread.Click += new System.EventHandler(this.endThread_Click);
+            this.stopThread0.BackColor = System.Drawing.Color.DarkSalmon;
+            this.stopThread0.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.stopThread0.Location = new System.Drawing.Point(721, 53);
+            this.stopThread0.Name = "stopThread0";
+            this.stopThread0.Size = new System.Drawing.Size(96, 37);
+            this.stopThread0.TabIndex = 7;
+            this.stopThread0.Text = "Stop";
+            this.stopThread0.UseVisualStyleBackColor = false;
+            this.stopThread0.Click += new System.EventHandler(this.endThread_Click);
             // 
-            // endTask
+            // stopTask
             // 
-            this.endTask.BackColor = System.Drawing.Color.DarkSalmon;
-            this.endTask.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.endTask.Location = new System.Drawing.Point(782, 178);
-            this.endTask.Name = "endTask";
-            this.endTask.Size = new System.Drawing.Size(96, 37);
-            this.endTask.TabIndex = 9;
-            this.endTask.Text = "End";
-            this.endTask.UseVisualStyleBackColor = false;
-            this.endTask.Click += new System.EventHandler(this.endTask_Click);
+            this.stopTask.BackColor = System.Drawing.Color.DarkSalmon;
+            this.stopTask.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.stopTask.Location = new System.Drawing.Point(721, 178);
+            this.stopTask.Name = "stopTask";
+            this.stopTask.Size = new System.Drawing.Size(96, 37);
+            this.stopTask.TabIndex = 9;
+            this.stopTask.Text = "Stop";
+            this.stopTask.UseVisualStyleBackColor = false;
+            this.stopTask.Click += new System.EventHandler(this.endTask_Click);
             // 
             // startTask
             // 
             this.startTask.BackColor = System.Drawing.Color.Lime;
             this.startTask.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.startTask.Location = new System.Drawing.Point(675, 178);
+            this.startTask.Location = new System.Drawing.Point(614, 178);
             this.startTask.Name = "startTask";
             this.startTask.Size = new System.Drawing.Size(96, 37);
             this.startTask.TabIndex = 8;
@@ -152,23 +155,23 @@
             this.startTask.UseVisualStyleBackColor = false;
             this.startTask.Click += new System.EventHandler(this.startTask_Click);
             // 
-            // endAsync
+            // stopAsync
             // 
-            this.endAsync.BackColor = System.Drawing.Color.DarkSalmon;
-            this.endAsync.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.endAsync.Location = new System.Drawing.Point(782, 316);
-            this.endAsync.Name = "endAsync";
-            this.endAsync.Size = new System.Drawing.Size(96, 37);
-            this.endAsync.TabIndex = 11;
-            this.endAsync.Text = "End";
-            this.endAsync.UseVisualStyleBackColor = false;
-            this.endAsync.Click += new System.EventHandler(this.endAsync_Click);
+            this.stopAsync.BackColor = System.Drawing.Color.DarkSalmon;
+            this.stopAsync.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.stopAsync.Location = new System.Drawing.Point(721, 316);
+            this.stopAsync.Name = "stopAsync";
+            this.stopAsync.Size = new System.Drawing.Size(96, 37);
+            this.stopAsync.TabIndex = 11;
+            this.stopAsync.Text = "Stop";
+            this.stopAsync.UseVisualStyleBackColor = false;
+            this.stopAsync.Click += new System.EventHandler(this.endAsync_Click);
             // 
             // startAsync
             // 
             this.startAsync.BackColor = System.Drawing.Color.Lime;
             this.startAsync.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.startAsync.Location = new System.Drawing.Point(675, 316);
+            this.startAsync.Location = new System.Drawing.Point(614, 316);
             this.startAsync.Name = "startAsync";
             this.startAsync.Size = new System.Drawing.Size(96, 37);
             this.startAsync.TabIndex = 10;
@@ -181,11 +184,11 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(902, 450);
-            this.Controls.Add(this.endAsync);
+            this.Controls.Add(this.stopAsync);
             this.Controls.Add(this.startAsync);
-            this.Controls.Add(this.endTask);
+            this.Controls.Add(this.stopTask);
             this.Controls.Add(this.startTask);
-            this.Controls.Add(this.endThread);
+            this.Controls.Add(this.stopThread0);
             this.Controls.Add(this.startThread);
             this.Controls.Add(this.lblAsync);
             this.Controls.Add(this.lblTask);
@@ -209,11 +212,11 @@
         private System.Windows.Forms.ProgressBar progressAsync;
         private System.Windows.Forms.ProgressBar progressTask;
         private System.Windows.Forms.ProgressBar progressThread;
-        private System.Windows.Forms.Button endAsync;
+        private System.Windows.Forms.Button stopAsync;
         private System.Windows.Forms.Button startAsync;
-        private System.Windows.Forms.Button endTask;
+        private System.Windows.Forms.Button stopTask;
         private System.Windows.Forms.Button startTask;
-        private System.Windows.Forms.Button endThread;
+        private System.Windows.Forms.Button stopThread0;
         private System.Windows.Forms.Button startThread;
     }
 }

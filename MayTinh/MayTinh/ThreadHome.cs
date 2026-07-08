@@ -10,31 +10,38 @@ namespace MayTinh
         public ThreadHome()
         {
             InitializeComponent();
+            this.FormClosing += ThreadHome_FormClosing;
         }
         private Thread thread;
-        private bool stopThread = false;
+        private bool threadRunning;
+        private int valueThread = 0;
+        private Task taskWorker;
         private CancellationTokenSource taskCTS;
+        private int valueTask = 0;
         private CancellationTokenSource asyncCTS;
+        private bool asyncRunning;
+        private int valueAsync = 0;
         private void RunThread()
         {
-            for (int i = 0; i <= 100; i++)
+            while (threadRunning)
             {
-                if (stopThread)
+                if (IsDisposed)
                     return;
-
-                Invoke(new Action(() =>
+                BeginInvoke(new Action(() =>
                 {
-                    progressThread.Value = i;
+                    //Text = valueThread.ToString();
+                    progressThread.Value = valueThread;
                 }));
-
-                Thread.Sleep(10);
+                valueThread ++;
+                if (valueThread > 100) valueThread = 50;
+                Thread.Sleep(50);
             }
         }
 
-        private void startThread_Click_1(object sender, EventArgs e)
+        private void startThread_Click(object sender, EventArgs e)
         {
-            stopThread = false;
-            progressThread.Value = 0;
+            if (threadRunning) return;
+            threadRunning = true;
             thread = new Thread(RunThread);
             thread.IsBackground = true;
             thread.Start();
@@ -42,72 +49,66 @@ namespace MayTinh
 
         private void endThread_Click(object sender, EventArgs e)
         {
-            stopThread = true;
-            progressThread.Value = 0;
+            threadRunning = false;
         }
-        
         private async void startTask_Click(object sender, EventArgs e)
         {
+            if (taskWorker != null && !taskWorker.IsCompleted) return;
+
             taskCTS = new CancellationTokenSource();
-            progressTask.Value = 0;
-            try
+
+            taskWorker = Task.Run(() =>
             {
-                await Task.Run(() =>
+                while (!taskCTS.Token.IsCancellationRequested)
                 {
-                    for (int i = 0; i <= 100; i++)
-                    {
-                        taskCTS.Token.ThrowIfCancellationRequested();
-
-                        Invoke(new Action(() =>
-                        {
-                            progressTask.Value = i;
-                        }));
-
-                        Thread.Sleep(10);
-                    }
-
-                }, taskCTS.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                progressTask.Invoke(new Action(() =>
-                {
-                    progressTask.Value = 0;
-                }));
-            }
+                    if (IsDisposed) return;
+                    BeginInvoke(new Action(() => {progressTask.Value = valueTask;}));
+                    valueTask++;
+                    if (valueTask > 100) valueTask = 0;
+                    Thread.Sleep(50);
+                }
+            }, taskCTS.Token);
         }
-
         private void endTask_Click(object sender, EventArgs e)
         {
             taskCTS?.Cancel();
-            progressTask.Value = 0;
-        }
-
-        private void endAsync_Click(object sender, EventArgs e)
-        {
-            asyncCTS?.Cancel();
-            progressAsync.Value = 0;
         }
         private async void startAsync_Click(object sender, EventArgs e)
         {
+            if (asyncRunning) return;
+            asyncRunning = true;
             asyncCTS = new CancellationTokenSource();
-            progressAsync.Value = 0;
-
             try
             {
-                for (int i = 0; i <= 100; i++)
+                while (asyncRunning)
                 {
                     asyncCTS.Token.ThrowIfCancellationRequested();
-
-                    progressAsync.Value = i;
-
-                    await Task.Delay(10, asyncCTS.Token);
+                    valueAsync++;
+                    if (valueAsync > 100) { valueAsync = 0; }
+                    progressAsync.Value = valueAsync;
+                    await Task.Delay(50, asyncCTS.Token);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException){}
+            finally
             {
-                progressAsync.Value = 0;
+                asyncRunning = false;
             }
+        }
+        private void endAsync_Click(object sender, EventArgs e)
+        {
+            asyncCTS?.Cancel();
+        }
+        private void ThreadHome_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            threadRunning = false;
+            taskCTS?.Cancel();
+            asyncCTS?.Cancel();
+        }
+
+        private void progressThread_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

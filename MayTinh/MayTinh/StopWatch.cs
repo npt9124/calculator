@@ -1,12 +1,16 @@
-﻿using System;
+﻿using CsvHelper;
+using CsvHelper.TypeConversion;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
-using System.Windows.Forms;
+using System.Globalization;
 using System.IO;
-using System.Text.Json;
+using System.Linq;
 using System.Runtime.InteropServices;
-
+using System.Text;
+using System.Text.Json;
+using System.Windows.Forms;
+using static MayTinh.StopWatch;
 namespace MayTinh
 {
 
@@ -22,8 +26,6 @@ namespace MayTinh
             btnSave.Enabled = false;
 
         }
-
-
         long elapsedMilliseconds = 0;
         bool isRunning = false;
         int lap = 1;
@@ -84,7 +86,6 @@ namespace MayTinh
 
             }
         }
-
         private void btnSave_Click(object sender, EventArgs e)
         {
             if (!timer1.Enabled)
@@ -148,7 +149,7 @@ namespace MayTinh
                 default: return "All files (*.*)|*.*";
             }
         }
-    public class IniFile
+        public class IniFile
         {
         public string Path;
 
@@ -181,27 +182,10 @@ namespace MayTinh
         public string Read(string section, string key)
         {
             StringBuilder sb = new StringBuilder(255);
-
-            GetPrivateProfileString(
-                section,
-                key,
-                "",
-                sb,
-                255,
-                Path);
-
+            GetPrivateProfileString(section,key,"",sb,255,Path);
             return sb.ToString();
         }
     } 
-        private string ExportToCsv(List<LapRecord> laps)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("LapNumber,LapTime,TotalTime");
-            foreach (var l in laps)
-                sb.AppendLine($"{l.LapNumber},{l.LapTime},{l.TotalTime}");
-            return sb.ToString();
-        }
-
         private List<LapRecord> ImportFromJson(string content) =>
         JsonSerializer.Deserialize<List<LapRecord>>(content) ?? new List<LapRecord>();
 
@@ -210,22 +194,19 @@ namespace MayTinh
             var options = new JsonSerializerOptions { WriteIndented = true };
             return JsonSerializer.Serialize(laps, options);
         }
+     
         private string ExportToTxt(List<LapRecord> laps)
         {
             var sb = new StringBuilder();
-            foreach (var l in laps)
-                sb.AppendLine($"{l.LapNumber}\t{l.LapTime}\t{l.TotalTime}");
+            foreach (var l in laps)sb.AppendLine($"{l.LapNumber}\t{l.LapTime}\t{l.TotalTime}");
             return sb.ToString();
         }
-
         private void ExportToIni(List<LapRecord> laps, string fileName)
         {
             IniFile ini = new IniFile(fileName);
-
             for (int i = 0; i < laps.Count; i++)
             {
                 string section = $"Lap{i + 1}";
-
                 ini.Write(section, "Number", laps[i].LapNumber.ToString());
                 ini.Write(section, "LapTime", laps[i].LapTime);
                 ini.Write(section, "TotalTime", laps[i].TotalTime);
@@ -246,46 +227,59 @@ namespace MayTinh
                 string number = ini.Read(section, "Number");
 
                 if (string.IsNullOrEmpty(number))
+                {
+                    if (i == 1) throw new FormatException("Không đúng định dạng file");
                     break;
-
-                LapRecord lap = new LapRecord();
-
-                lap.LapNumber = int.Parse(number);
-                lap.LapTime = ini.Read(section, "LapTime");
-                lap.TotalTime = ini.Read(section, "TotalTime");
-
-                laps.Add(lap);
-
+                }
+                if (!int.TryParse(number, out int lapNum)) throw new FormatException("Format file không hợp lệ");
+                string lapTime = ini.Read(section, "Laptime");
+                string totalTime = ini.Read(section, "TotalTime");
+                if (string.IsNullOrEmpty(lapTime) || string.IsNullOrEmpty(totalTime)) throw new FormatException("File không đúng định dạng");
+                laps.Add(new LapRecord { LapNumber = lapNum, LapTime = lapTime, TotalTime = totalTime });
                 i++;
             }
-
             return laps;
         }
+        private string ExportToCsv(List<LapRecord> laps)
+        {
+            var writer = new StringWriter();
+            var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+            csv.WriteRecords(laps);
+            return writer.ToString();
+        }
+
         private List<LapRecord> ImportFromCsv(string content)
         {
-            var laps = new List<LapRecord>();
-            var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 1; i < lines.Length; i++)
-            {
-                var parts = lines[i].Split(',');
-                if (parts.Length < 3) continue;
-                laps.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
-            }
-            return laps;
+            var reader = new StringReader(content);
+            var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+            return csv.GetRecords<LapRecord>().ToList();
         }
-
-        
-
+        private bool IsValidTimeFormat(string time)
+        {
+            if (time.Length != 11) return false;
+            return System.Text.RegularExpressions.Regex.IsMatch(time, @"^\d{2}:\d{2}:\d{2}\.\d{2}$");
+        }
         private List<LapRecord> ImportFromTxt(string content)
         {
             var laps = new List<LapRecord>();
             var lines = content.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
+            if (lines.Length == 0) throw new FormatException("File txt không có dữ liệu");
+            for(int i =0; i<lines.Length; i++)
             {
-                var parts = line.Split('\t');
-                if (parts.Length < 3) continue;
-                laps.Add(new LapRecord { LapNumber = int.Parse(parts[0]), LapTime = parts[1], TotalTime = parts[2] });
+                var parts = lines[i].Split('\t');
+                if (parts.Length != 3) throw new FormatException("File không đúng định dạng");
+                if (int.TryParse(parts[0].Trim(), out int lapNum)) throw new FormatException("Dòng đầu phải chứa số nguyên hợp lệ");
+                if (!IsValidTimeFormat(parts[1].Trim())) throw new FormatException("Định dạng thời gian không hợp lệ");
+                if (!IsValidTimeFormat(parts[2].Trim())) throw new FormatException("Định dạng thời gian không hợp lệ");
+                laps.Add(new LapRecord
+                {
+                    LapNumber = lapNum,
+                    LapTime = parts[1].Trim(),
+                    TotalTime = parts[2].Trim()
+                });
             }
+            if (laps.Count == 0)throw new FormatException("File TXT không chứa dữ liệu lap hợp lệ.");
             return laps;
         }
         private void buttonDownload_Click(object sender, EventArgs e)
@@ -308,12 +302,10 @@ namespace MayTinh
                     TotalTime = row.Cells[2].Value?.ToString()
                 });
             }
-
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Filter = GetFileFilter(format);
             sfd.FileName = $"stopwatch_history.{format}";
             if (sfd.ShowDialog() != DialogResult.OK) return;
-
             try
             {
                 if (format == "ini")
@@ -332,7 +324,6 @@ namespace MayTinh
                     }
                     File.WriteAllText(sfd.FileName, content, Encoding.UTF8); 
                 }
-
                 MessageBox.Show("Xuất file thành công!");
             }
             catch (Exception ex)
@@ -348,15 +339,12 @@ namespace MayTinh
                 MessageBox.Show("Vui lòng chọn định dạng file!");
                 return;
             }
-
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Filter = GetFileFilter(format);
             if (ofd.ShowDialog() != DialogResult.OK) return;
-
             try
             {
                 List<LapRecord> laps;
-
                 if (format == "ini")
                 {
                     laps = ImportFromIni(ofd.FileName);
@@ -372,16 +360,14 @@ namespace MayTinh
                         default: throw new NotSupportedException();
                     }
                 }
-
                 dataGridView1.Rows.Clear();
                 for (int i = laps.Count - 1; i >= 0; i--)
                     dataGridView1.Rows.Insert(0, laps[i].LapNumber, laps[i].LapTime, laps[i].TotalTime);
-
                 MessageBox.Show("Nạp file thành công!");
             }
-            catch (Exception ex)
+            catch 
             {
-                MessageBox.Show("Lỗi khi đọc file: " + ex.Message);
+                MessageBox.Show("Lỗi khi đọc file");
             }
         }
         private void comboBox_SelectedIndexChanged(object sender, EventArgs e)
