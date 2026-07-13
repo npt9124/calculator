@@ -46,7 +46,6 @@ namespace MayTinh
             thread.IsBackground = true;
             thread.Start();
         }
-
         private void endThread_Click(object sender, EventArgs e)
         {
             threadRunning = false;
@@ -90,14 +89,12 @@ namespace MayTinh
                 }
             }
             catch (OperationCanceledException){}
-            finally
-            {
-                asyncRunning = false;
-            }
+            finally { asyncRunning = false;}
         }
         private void endAsync_Click(object sender, EventArgs e)
         {
             asyncCTS?.Cancel();
+            asyncRunning = false;
         }
         private void ThreadHome_FormClosing(object sender, FormClosingEventArgs e)
         {

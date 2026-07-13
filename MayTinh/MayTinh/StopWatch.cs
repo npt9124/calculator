@@ -185,16 +185,54 @@ namespace MayTinh
             GetPrivateProfileString(section,key,"",sb,255,Path);
             return sb.ToString();
         }
-    } 
-        private List<LapRecord> ImportFromJson(string content) =>
-        JsonSerializer.Deserialize<List<LapRecord>>(content) ?? new List<LapRecord>();
-
+    }
         private string ExportToJson(List<LapRecord> laps)
         {
+            var dict = new Dictionary<string, object>();
+            foreach (var l in laps)
+            {
+                dict[$"LapNumber{l.LapNumber}"] = new
+                {
+                    LapTime = l.LapTime,
+                    TotalTime = l.TotalTime
+                };
+            }
             var options = new JsonSerializerOptions { WriteIndented = true };
-            return JsonSerializer.Serialize(laps, options);
+            return JsonSerializer.Serialize(dict, options);
         }
-     
+
+        private List<LapRecord> ImportFromJson(string content)
+        {
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(content);
+                if (dict == null || dict.Count == 0)
+                    throw new FormatException("File JSON không chứa dữ liệu lap hợp lệ.");
+
+                var laps = new List<LapRecord>();
+                foreach (var kv in dict)
+                {
+                    if (!kv.Key.StartsWith("LapNumber"))
+                        throw new FormatException($"Không đúng định dạng, phải là LapNumber1, LapNumber2...");
+
+                    if (!int.TryParse(kv.Key.Replace("LapNumber", ""), out int lapNum))
+                        throw new FormatException($"Không đúng định dạng LapTime");
+
+                    string lapTime = kv.Value.GetProperty("LapTime").GetString();
+                    string totalTime = kv.Value.GetProperty("TotalTime").GetString();
+
+                    if (!IsValidTimeFormat(lapTime) || !IsValidTimeFormat(totalTime))
+                    throw new FormatException($"Định dạng thời gian không hợp lệ");
+                    laps.Add(new LapRecord { LapNumber = lapNum, LapTime = lapTime, TotalTime = totalTime });
+                }
+                laps.Sort((a, b) => a.LapNumber.CompareTo(b.LapNumber));
+                return laps;
+            }
+            catch (JsonException)
+            {
+                throw new FormatException("File JSON sai cú pháp, không thể đọc");
+            }
+        }  
         private string ExportToTxt(List<LapRecord> laps)
         {
             var sb = new StringBuilder();
@@ -269,7 +307,7 @@ namespace MayTinh
             {
                 var parts = lines[i].Split('\t');
                 if (parts.Length != 3) throw new FormatException("File không đúng định dạng");
-                if (int.TryParse(parts[0].Trim(), out int lapNum)) throw new FormatException("Dòng đầu phải chứa số nguyên hợp lệ");
+                if (!int.TryParse(parts[0].Trim(), out int lapNum)) throw new FormatException("Dòng đầu phải chứa số nguyên hợp lệ");
                 if (!IsValidTimeFormat(parts[1].Trim())) throw new FormatException("Định dạng thời gian không hợp lệ");
                 if (!IsValidTimeFormat(parts[2].Trim())) throw new FormatException("Định dạng thời gian không hợp lệ");
                 laps.Add(new LapRecord
@@ -279,7 +317,7 @@ namespace MayTinh
                     TotalTime = parts[2].Trim()
                 });
             }
-            if (laps.Count == 0)throw new FormatException("File TXT không chứa dữ liệu lap hợp lệ.");
+            if (laps.Count == 0)throw new FormatException("File TXT không chứa dữ liệu hợp lệ.");
             return laps;
         }
         private void buttonDownload_Click(object sender, EventArgs e)
@@ -362,12 +400,12 @@ namespace MayTinh
                 }
                 dataGridView1.Rows.Clear();
                 for (int i = laps.Count - 1; i >= 0; i--)
-                    dataGridView1.Rows.Insert(0, laps[i].LapNumber, laps[i].LapTime, laps[i].TotalTime);
+                dataGridView1.Rows.Insert(0, laps[i].LapNumber, laps[i].LapTime, laps[i].TotalTime);
                 MessageBox.Show("Nạp file thành công!");
             }
-            catch 
+            catch(Exception ex)
             {
-                MessageBox.Show("Lỗi khi đọc file");
+                MessageBox.Show("Lỗi khi đọc file" + " " + ex.Message);
             }
         }
         private void comboBox_SelectedIndexChanged(object sender, EventArgs e)
